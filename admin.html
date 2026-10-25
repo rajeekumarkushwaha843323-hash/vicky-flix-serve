@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VICKY FLIX Admin</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #101010;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    .box {
+      max-width: 500px;
+      margin: 20px auto;
+      background: #202020;
+      padding: 20px;
+      border-radius: 14px;
+    }
+    h1 { color: #ff3030; }
+    input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+    }
+    input { background: #303030; color: white; border: 1px solid #555; }
+    button {
+      background: #e50914;
+      color: white;
+      border: 0;
+      font-weight: bold;
+    }
+    a { color: #ff6464; overflow-wrap: anywhere; }
+    .video { padding: 12px 0; border-bottom: 1px solid #444; }
+    #message { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>VICKY FLIX</h1>
+    <h3>Admin Video Upload</h3>
+
+    <label>Admin Token</label>
+    <input id="token" type="password"
+      placeholder="Apna secret token daalein"
+      autocomplete="current-password">
+
+    <label>MP4 Video Select Karein</label>
+    <input id="video" type="file" accept="video/mp4">
+
+    <button onclick="uploadVideo()">UPLOAD VIDEO</button>
+    <button onclick="loadVideos()">REFRESH VIDEO LIST</button>
+
+    <p id="message" role="status"></p>
+    <h3>Uploaded Videos</h3>
+    <div id="videos">List load ho rahi hai...</div>
+  </div>
+
+  <script>
+    async function loadVideos() {
+      const box = document.getElementById('videos');
+      box.textContent = 'Loading...';
+
+      try {
+        const response = await fetch('/api/videos');
+        if (!response.ok) throw new Error('List load nahi hui');
+
+        const videos = await response.json();
+        box.replaceChildren();
+
+        if (!videos.length) {
+          box.textContent = 'Abhi koi video nahi hai.';
+          return;
+        }
+
+        videos.forEach(video => {
+          const item = document.createElement('div');
+          item.className = 'video';
+
+          const title = document.createElement('p');
+          title.textContent = video.title || 'Video';
+
+          const link = document.createElement('a');
+          link.href = video.url;
+          link.textContent = 'Video dekhein';
+          link.target = '_blank';
+          link.rel = 'noopener';
+
+          item.append(title, link);
+          box.appendChild(item);
+        });
+      } catch (error) {
+        box.textContent = error.message;
+      }
+    }
+
+    async function uploadVideo() {
+      const token = document.getElementById('token').value;
+      const file = document.getElementById('video').files[0];
+      const message = document.getElementById('message');
+
+      if (!token || !file) {
+        message.textContent = 'Token aur video dono select karein.';
+        return;
+      }
+
+      if (file.type !== 'video/mp4') {
+        message.textContent = 'Sirf MP4 video select karein.';
+        return;
+      }
+
+      const data = new FormData();
+      data.append('video', file);
+
+      message.textContent = 'Uploading...';
+
+      try {
+        const response = await fetch('/api/admin/upload', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: data
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Upload fail hua');
+        }
+
+        message.textContent = 'Video upload ho gaya!';
+        document.getElementById('video').value = '';
+        await loadVideos();
+      } catch (error) {
+        message.textContent = 'Error: ' + error.message;
+      }
+    }
+
+    loadVideos();
+  </script>
+</body>
+</html>
